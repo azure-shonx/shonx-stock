@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "docvault_linkfunc": {
+      "commandName": "Project",
+      "commandLineArgs": "--port 7037",
+      "launchBrowser": false
+    }
+  }
+}
