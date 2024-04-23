@@ -2,26 +2,33 @@ namespace net.shonx.stocks;
 
 using System.Text;
 using System.Threading.Tasks;
-using Microsoft.Azure.WebJobs;
+using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
 public class ProcessStocks(ILoggerFactory loggerFactory)
 {
 
-    private static readonly string? DISCORD_URL = Environment.GetEnvironmentVariable("DISCORD");
-    private static readonly string? API_KEY = Environment.GetEnvironmentVariable("AV_KEY");
+    private const string NCRON_VALUE = "0 30 16 * * 1-5"; // See https://github.com/atifaziz/NCrontab
+    private static readonly string? DISCORD_URL = Environment.GetEnvironmentVariable("DISCORD_URL");
+    private static readonly string? API_KEY = Environment.GetEnvironmentVariable("API_KEY");
     private readonly ILogger _logger = loggerFactory.CreateLogger<ProcessStocks>();
     private static readonly HttpClient client = new();
     private static readonly string[] symbols = ["DJT", "TSLA", "NVDA", "SPY", "GLD", "SLV"];
 
-    [FunctionName("ProcessStocks")]
-    public async Task Run([TimerTrigger("30 16 * * *")] TimerInfo myTimer)
+    [Function("ProcessStocks")]
+    public async Task Run([TimerTrigger(NCRON_VALUE)] TimerInfo myTimer)
     {
         if (string.IsNullOrEmpty(DISCORD_URL))
+        {
+            _logger.LogError("DISCORD_URL not found.");
             throw new NullReferenceException();
+        }
         if (string.IsNullOrEmpty(API_KEY))
+        {
+            _logger.LogError("API_KEY not found.");
             throw new NullReferenceException();
+        }
         DiscordMessage message = new(null);
         DiscordEmbed embed = new("Market Update", default, null);
         int positive = 0;
@@ -30,17 +37,16 @@ public class ProcessStocks(ILoggerFactory loggerFactory)
             StockData? data = await StockData(symbol);
             if (data is null || data.TimeSeries is null)
             {
-                Console.WriteLine("Data returned null.");
+                _logger.LogError("Data returned null.");
                 return;
             }
-            // string todaysDate = DateTime.Now.ToString("yyyy-MM-dd");
             string todaysDate = DateTime.Now.ToString("yyyy-MM-dd");
 
             var todayPair = data.TimeSeries.ElementAt(0);
             if (!todayPair.Key.Equals(todaysDate))
             {
-                Console.WriteLine("Market is closed.");
-                return; // Market's closed
+                _logger.LogInformation("Market is closed.");
+                return;
             }
             DailyData today = todayPair.Value;
             DailyData yesterday = data.TimeSeries.ElementAt(1).Value;
@@ -65,8 +71,7 @@ public class ProcessStocks(ILoggerFactory loggerFactory)
                 verb = "Down";
                 positive--;
             }
-
-            Console.WriteLine($"opened={opened:F2} closed={closed:F2} changedValue={changedValue:F2} changedPercent={changedPercent}");
+            
             if ((changedPercent > (decimal)-0.1) && (changedPercent < (decimal)0.1))
             {
                 embed.Fields.Add(new(symbol, $"{verb} {emoji} {changedPercent:F4}% to ${closed:F2}"));
