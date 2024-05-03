@@ -74,11 +74,11 @@ public class ProcessStocks(ILoggerFactory loggerFactory)
             
             if ((changedPercent > (decimal)-0.1) && (changedPercent < (decimal)0.1))
             {
-                embed.Fields.Add(new(symbol, $"{verb} {emoji} {changedPercent:F4}% to ${closed:F2}"));
+                embed.Fields.Add(new(symbol, $"{verb} {emoji} {Math.Abs(changedPercent):F4}% to ${closed:F2}"));
             }
             else
             {
-                embed.Fields.Add(new(symbol, $"{verb} {emoji} {changedPercent:F2}% to ${closed:F2}"));
+                embed.Fields.Add(new(symbol, $"{verb} {emoji} {Math.Abs(changedPercent):F2}% to ${closed:F2}"));
             }
         }
         message.Embeds.Add(embed);
