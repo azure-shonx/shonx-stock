@@ -1,6 +1,6 @@
 {
   "profiles": {
-    "docvault_linkfunc": {
+    "stonks": {
       "commandName": "Project",
       "commandLineArgs": "--port 7037",
       "launchBrowser": false

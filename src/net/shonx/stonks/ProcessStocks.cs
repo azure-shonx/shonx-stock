@@ -14,7 +14,7 @@ public class ProcessStocks(ILoggerFactory loggerFactory)
     private static readonly string? API_KEY = Environment.GetEnvironmentVariable("API_KEY");
     private readonly ILogger _logger = loggerFactory.CreateLogger<ProcessStocks>();
     private static readonly HttpClient client = new();
-    private static readonly string[] symbols = ["DJT", "TSLA", "NVDA", "SPY", "GLD", "SLV"];
+    private static readonly string[] symbols = ["GME", "AMC", "DJT", "TSLA", "NVDA", "SPY", "GLD", "SLV"];
 
     [Function("ProcessStocks")]
     public async Task Run([TimerTrigger(NCRON_VALUE)] TimerInfo myTimer)
@@ -71,7 +71,7 @@ public class ProcessStocks(ILoggerFactory loggerFactory)
                 verb = "Down";
                 positive--;
             }
-            
+
             if ((changedPercent > (decimal)-0.1) && (changedPercent < (decimal)0.1))
             {
                 embed.Fields.Add(new(symbol, $"{verb} {emoji} {Math.Abs(changedPercent):F4}% to ${closed:F2}"));
@@ -96,13 +96,18 @@ public class ProcessStocks(ILoggerFactory loggerFactory)
 
     private static string GetEmoji(decimal percent)
     {
+        if(percent >= 14)
+            return "🚀🌕";
         if (percent >= 7)
             return "🚀";
         if (percent >= 0 && percent < 7)
             return "📈";
         if (percent > -7 && percent < 0)
             return "📉";
-        return "🔥";
+        if(percent > -14)
+            return "🔥";
+        else
+            return "🔥💥";
     }
 
     private static async Task<StockData?> StockData(string symbol)
