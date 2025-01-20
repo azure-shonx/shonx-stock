@@ -19,82 +19,80 @@ public class ProcessStocks(ILoggerFactory loggerFactory)
     [Function("ProcessStocks")]
     public async Task Run([TimerTrigger(NCRON_VALUE)] TimerInfo myTimer)
     {
-        try
+        if (string.IsNullOrEmpty(DISCORD_URL))
         {
-            if (string.IsNullOrEmpty(DISCORD_URL))
+            _logger.LogError("DISCORD_URL not found.");
+            throw new NullReferenceException("DISCORD_URL not found.");
+        }
+        if (string.IsNullOrEmpty(API_KEY))
+        {
+            _logger.LogError("API_KEY not found.");
+            throw new NullReferenceException("API_KEY not found.");
+        }
+        DiscordMessage message = new(null);
+        DiscordEmbed embed = new("Market Update", default, null);
+        int positive = 0;
+        foreach (string symbol in symbols)
+        {
+            StockData? data = await StockData(symbol);
+            if (data is null || data.TimeSeries is null)
             {
-                _logger.LogError("DISCORD_URL not found.");
-                throw new NullReferenceException("DISCORD_URL not found.");
+                _logger.LogError("Data returned null.");
+                throw new StockException("Data returned null.");
             }
-            if (string.IsNullOrEmpty(API_KEY))
+            string todaysDate = DateTime.Now.ToString("yyyy-MM-dd");
+
+            var todayPair = data.TimeSeries.ElementAt(0);
+            if (!todayPair.Key.Equals(todaysDate))
             {
-                _logger.LogError("API_KEY not found.");
-                throw new NullReferenceException("API_KEY not found.");
+                _logger.LogInformation("Market is closed.");
+                return;
             }
-            DiscordMessage message = new(null);
-            DiscordEmbed embed = new("Market Update", default, null);
-            int positive = 0;
-            foreach (string symbol in symbols)
+            DailyData today = todayPair.Value;
+            DailyData yesterday = data.TimeSeries.ElementAt(1).Value;
+
+            decimal opened = yesterday.Close;
+            decimal closed = today.Close;
+
+            decimal changedValue = closed - opened;
+
+            decimal changedPercent = changedValue / opened * 100;
+
+            string emoji = GetEmoji(changedPercent);
+
+            string verb;
+            if (changedPercent >= 0)
             {
-                StockData? data = await StockData(symbol);
-                if (data is null || data.TimeSeries is null)
-                {
-                    _logger.LogError("Data returned null.");
-                    throw new StockException("Data returned null.");
-                }
-                string todaysDate = DateTime.Now.ToString("yyyy-MM-dd");
-
-                var todayPair = data.TimeSeries.ElementAt(0);
-                if (!todayPair.Key.Equals(todaysDate))
-                {
-                    _logger.LogInformation("Market is closed.");
-                    return;
-                }
-                DailyData today = todayPair.Value;
-                DailyData yesterday = data.TimeSeries.ElementAt(1).Value;
-
-                decimal opened = yesterday.Close;
-                decimal closed = today.Close;
-
-                decimal changedValue = closed - opened;
-
-                decimal changedPercent = changedValue / opened * 100;
-
-                string emoji = GetEmoji(changedPercent);
-
-                string verb;
-                if (changedPercent >= 0)
-                {
-                    verb = "Up";
-                    positive++;
-                }
-                else
-                {
-                    verb = "Down";
-                    positive--;
-                }
-
-                if ((changedPercent > (decimal)-0.1) && (changedPercent < (decimal)0.1))
-                {
-                    embed.Fields.Add(new(symbol, $"{verb} {emoji} {Math.Abs(changedPercent):F4}% to ${closed:F2}"));
-                }
-                else
-                {
-                    embed.Fields.Add(new(symbol, $"{verb} {emoji} {Math.Abs(changedPercent):F2}% to ${closed:F2}"));
-                }
-            }
-            message.Embeds.Add(embed);
-            if (positive >= 0)
-            {
-                embed.Color = 65280;
+                verb = "Up";
+                positive++;
             }
             else
             {
-                embed.Color = 16711680;
+                verb = "Down";
+                positive--;
             }
 
-            await SendToDiscord(message);
+            if ((changedPercent > (decimal)-0.1) && (changedPercent < (decimal)0.1))
+            {
+                embed.Fields.Add(new(symbol, $"{verb} {emoji} {Math.Abs(changedPercent):F4}% to ${closed:F2}"));
+            }
+            else
+            {
+                embed.Fields.Add(new(symbol, $"{verb} {emoji} {Math.Abs(changedPercent):F2}% to ${closed:F2}"));
+            }
         }
+        message.Embeds.Add(embed);
+        if (positive >= 0)
+        {
+            embed.Color = 65280;
+        }
+        else
+        {
+            embed.Color = 16711680;
+        }
+
+        await SendToDiscord(message);
+    }
 
     private static string GetEmoji(decimal percent)
     {
@@ -121,8 +119,7 @@ public class ProcessStocks(ILoggerFactory loggerFactory)
         int statusCode = (int)response.StatusCode;
         if (statusCode != 200)
         {
-            Console.WriteLine($"Got {statusCode}");
-            return null;
+            throw new StockException($"Got {statusCode} from alphavantage.");
         }
         string apiResponse = await response.Content.ReadAsStringAsync();
         return JsonConvert.DeserializeObject<StockData>(apiResponse);
