@@ -9,7 +9,7 @@ using Newtonsoft.Json;
 public class ProcessStocks(ILoggerFactory loggerFactory)
 {
 
-    private const string NCRON_VALUE = "0 30 16 * * 1-5"; // See https://github.com/atifaziz/NCrontab
+    private const string NCRON_VALUE = "0 31 16 * * 1-5"; // See https://github.com/atifaziz/NCrontab
     private static readonly string? DISCORD_URL = Environment.GetEnvironmentVariable("DISCORD_URL");
     private static readonly string? API_KEY = Environment.GetEnvironmentVariable("API_KEY");
     private readonly ILogger _logger = loggerFactory.CreateLogger<ProcessStocks>();
@@ -22,12 +22,12 @@ public class ProcessStocks(ILoggerFactory loggerFactory)
         if (string.IsNullOrEmpty(DISCORD_URL))
         {
             _logger.LogError("DISCORD_URL not found.");
-            throw new NullReferenceException("DISCORD_URL not found.");
+           throw new StockException(new NullReferenceException("DISCORD_URL not found."));
         }
         if (string.IsNullOrEmpty(API_KEY))
         {
             _logger.LogError("API_KEY not found.");
-            throw new NullReferenceException("API_KEY not found.");
+            throw new StockException(new NullReferenceException("API_KEY not found."));
         }
         DiscordMessage message = new(null);
         DiscordEmbed embed = new("Market Update", default, null);
@@ -46,6 +46,9 @@ public class ProcessStocks(ILoggerFactory loggerFactory)
             if (!todayPair.Key.Equals(todaysDate))
             {
                 _logger.LogInformation("Market is closed.");
+                embed.Fields.Add(new("Market Closed", "The market is closed today. Have a nice day!"));
+                message.Embeds.Add(embed);
+                await SendToDiscord(message);
                 return;
             }
             DailyData today = todayPair.Value;

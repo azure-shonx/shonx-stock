@@ -1,3 +1,9 @@
 namespace net.shonx.stocks;
 
-public class StockException(string message) : Exception(message) { }
+public class StockException : Exception
+{
+    public StockException(string message) : base(message) { }
+    public StockException(Exception exception) : base(null, exception) { }
+
+    public StockException(string message, Exception exception) : base(message, exception) { }
+}
