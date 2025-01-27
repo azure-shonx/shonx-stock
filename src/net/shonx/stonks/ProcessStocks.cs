@@ -43,13 +43,14 @@ public class ProcessStocks(ILoggerFactory loggerFactory)
             string todaysDate = DateTime.Now.ToString("yyyy-MM-dd");
 
             var todayPair = data.TimeSeries.ElementAt(0);
+            _logger.LogInformation($"Today's date is {todaysDate}. Last entry in series is {todayPair.Key}");
             if (!todayPair.Key.Equals(todaysDate))
             {
                 _logger.LogInformation("Market is closed.");
-                embed.Fields.Add(new("Market Closed", "The market is closed today. Have a nice day!"));
-                message.Embeds.Add(embed);
-                await SendToDiscord(message);
-                return;
+                //embed.Fields.Add(new("Market Closed", "The market is closed today. Have a nice day!"));
+               // message.Embeds.Add(embed);
+                //await SendToDiscord(message);
+               // return;
             }
             DailyData today = todayPair.Value;
             DailyData yesterday = data.TimeSeries.ElementAt(1).Value;
