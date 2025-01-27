@@ -22,7 +22,7 @@ public class ProcessStocks(ILoggerFactory loggerFactory)
         if (string.IsNullOrEmpty(DISCORD_URL))
         {
             _logger.LogError("DISCORD_URL not found.");
-           throw new StockException(new NullReferenceException("DISCORD_URL not found."));
+            throw new StockException(new NullReferenceException("DISCORD_URL not found."));
         }
         if (string.IsNullOrEmpty(API_KEY))
         {
@@ -48,9 +48,9 @@ public class ProcessStocks(ILoggerFactory loggerFactory)
             {
                 _logger.LogInformation("Market is closed.");
                 //embed.Fields.Add(new("Market Closed", "The market is closed today. Have a nice day!"));
-               // message.Embeds.Add(embed);
+                // message.Embeds.Add(embed);
                 //await SendToDiscord(message);
-               // return;
+                return;
             }
             DailyData today = todayPair.Value;
             DailyData yesterday = data.TimeSeries.ElementAt(1).Value;
