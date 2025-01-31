@@ -1,5 +1,6 @@
 namespace net.shonx.stocks;
 
+using System.Drawing;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Azure.Functions.Worker;
@@ -21,12 +22,12 @@ public class ProcessStocks(ILoggerFactory loggerFactory)
     {
         if (string.IsNullOrEmpty(DISCORD_URL))
         {
-            _logger.LogError("DISCORD_URL not found.");
+            _logger.LogError("[Stonk] DISCORD_URL not found.");
             throw new StockException(new NullReferenceException("DISCORD_URL not found."));
         }
         if (string.IsNullOrEmpty(API_KEY))
         {
-            _logger.LogError("API_KEY not found.");
+            _logger.LogError("[Stonk] API_KEY not found.");
             throw new StockException(new NullReferenceException("API_KEY not found."));
         }
         DiscordMessage message = new(null);
@@ -37,20 +38,16 @@ public class ProcessStocks(ILoggerFactory loggerFactory)
             StockData? data = await StockData(symbol);
             if (data is null || data.TimeSeries is null)
             {
-                _logger.LogError("Data returned null.");
+                _logger.LogError("[Stonk] Data returned null.");
                 throw new StockException("Data returned null.");
             }
             string todaysDate = DateTime.Now.ToString("yyyy-MM-dd");
 
             var todayPair = data.TimeSeries.ElementAt(0);
-            _logger.LogInformation($"Today's date is {todaysDate}. Last entry in series is {todayPair.Key}");
+            _logger.LogInformation($"[Stonk] Today's date is {todaysDate}. Last entry in series is {todayPair.Key}");
             if (!todayPair.Key.Equals(todaysDate))
             {
-                _logger.LogInformation("Market is closed.");
-                //embed.Fields.Add(new("Market Closed", "The market is closed today. Have a nice day!"));
-                // message.Embeds.Add(embed);
-                //await SendToDiscord(message);
-                return;
+                continue;
             }
             DailyData today = todayPair.Value;
             DailyData yesterday = data.TimeSeries.ElementAt(1).Value;
@@ -84,6 +81,14 @@ public class ProcessStocks(ILoggerFactory loggerFactory)
             {
                 embed.Fields.Add(new(symbol, $"{verb} {emoji} {Math.Abs(changedPercent):F2}% to ${closed:F2}"));
             }
+        }
+        if (embed.Fields.Count == 0)
+        {
+            embed.Fields.Add(new("Market Closed", "The market is closed today. Have a nice day!"));
+            message.Embeds.Add(embed);
+            embed.Color = Color.Purple.ToArgb();
+            await SendToDiscord(message);
+            return;
         }
         message.Embeds.Add(embed);
         if (positive >= 0)
