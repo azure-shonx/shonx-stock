@@ -10,7 +10,7 @@ using Newtonsoft.Json;
 public class ProcessStocks(ILoggerFactory loggerFactory)
 {
 
-    private const string NCRON_VALUE = "0 31 16 * * 1-5"; // See https://github.com/atifaziz/NCrontab
+    private const string NCRON_VALUE = "0 0 17 * * 1-5"; // See https://github.com/atifaziz/NCrontab
     private static readonly string? DISCORD_URL = Environment.GetEnvironmentVariable("DISCORD_URL");
     private static readonly string? API_KEY = Environment.GetEnvironmentVariable("API_KEY");
     private readonly ILogger _logger = loggerFactory.CreateLogger<ProcessStocks>();
